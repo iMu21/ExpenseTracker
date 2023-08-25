@@ -4,27 +4,27 @@
     ViewData["Title"] = "Edit";
 }
 
-<h1>Edit</h1>
+<h1 style="text-align:center">Edit</h1>
 
-<h4>Expense</h4>
+<h4 >Expense</h4>
 <hr />
 <div class="row">
     <div class="col-md-4">
-        <form asp-action="Edit">
+        <form asp-action="Edit" class="form-horizontal">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label asp-for="Amount" class="control-label"></label>
                 <input asp-for="Amount" class="form-control" />
                 <span asp-validation-for="Amount" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label asp-for="ExpenseDateTimeUtc" class="control-label"></label>
                 <input asp-for="ExpenseDateTimeUtc" class="form-control"
                        max="@DateTime.UtcNow"
                        value="@DateTime.UtcNow" />
                 <span asp-validation-for="ExpenseDateTimeUtc" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label asp-for="CategoryId" class="control-label"></label>
                 <div class="col-md-10">
                     @Html.DropDownListFor(model => model.CategoryId, new SelectList(

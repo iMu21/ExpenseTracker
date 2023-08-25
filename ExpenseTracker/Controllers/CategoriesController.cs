@@ -9,39 +9,32 @@ using ExpenseTracker;
 using ExpenseTracker.Models;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using ExpenseTracker.Interfaces;
 
 namespace ExpenseTracker.Controllers
 {
     [AllowAnonymous]
     public class CategoriesController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ICategoryService _categoryService;
         private readonly IHttpContextAccessor _contextAccessor;
 
-        public CategoriesController(ApplicationDbContext context,IHttpContextAccessor contextAccessor)
+        public CategoriesController(ICategoryService categoryService, IHttpContextAccessor contextAccessor)
         {
-            _context = context;
+            _categoryService = categoryService;
             _contextAccessor = contextAccessor;
         }
 
-        // GET: Categories
         public async Task<IActionResult> Index()
         {
-              return _context.Category != null ? 
-                          View(await _context.Category.ToListAsync()) :
-                          Problem("Entity set 'MariaDbContext.Category'  is null.");
+            var categories = await _categoryService.GetAllAsync();
+            return View(categories);
         }
 
-        // GET: Categories/Details/5
         public async Task<IActionResult> Details(long? id)
         {
-            if (id == null || _context.Category == null)
-            {
-                return NotFound();
-            }
+            var category = await _categoryService.FIndByIdAsync(id??0);
 
-            var category = await _context.Category
-                .FirstOrDefaultAsync(m => m.Id == id);
             if (category == null)
             {
                 return NotFound();
@@ -50,40 +43,32 @@ namespace ExpenseTracker.Controllers
             return View(category);
         }
 
-        // GET: Categories/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Categories/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Name")] Category category)
         {
-            category.CreatedBy = _contextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            category.CreatedDateUtc = DateTime.UtcNow;
+            var isExist = await _categoryService.IsExistAsync(category.Name);
+
+            if (isExist)
+                ModelState.AddModelError(nameof(category.Name), "Category already exist");
 
             if (ModelState.IsValid)
             {
-                _context.Add(category);
-                await _context.SaveChangesAsync();
+                await _categoryService.AddAsync(category);
                 return RedirectToAction(nameof(Index));
             }
+
             return View(category);
         }
 
-        // GET: Categories/Edit/5
         public async Task<IActionResult> Edit(long? id)
         {
-            if (id == null || _context.Category == null)
-            {
-                return NotFound();
-            }
-
-            var category = await _context.Category.FindAsync(id);
+            var category = await _categoryService.FIndByIdAsync(id??0);
             if (category == null)
             {
                 return NotFound();
@@ -91,51 +76,32 @@ namespace ExpenseTracker.Controllers
             return View(category);
         }
 
-        // POST: Categories/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("Name,Id,CreatedBy,CreatedDateUtc,UpdatedBy,UpdatedDateUtc")] Category category)
+        public async Task<IActionResult> Edit(long id, [Bind("Name")] Category category)
         {
-            if (id != category.Id)
-            {
-                return NotFound();
-            }
+            var isNameExist = await _categoryService.IsExistAsync(category.Name);
+
+            if (isNameExist)
+                ModelState.AddModelError(nameof(category.Name), "Category already exist");
 
             if (ModelState.IsValid)
             {
-                try
+                var entity = await _categoryService.FIndByIdAsync(id);
+                if (entity != null)
                 {
-                    _context.Update(category);
-                    await _context.SaveChangesAsync();
+                    entity.Name = category.Name;
+                    await _categoryService.EditAsync(id, entity);
+                    return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!CategoryExists(category.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
             }
+            ModelState.AddModelError(nameof(category.Name), "Doesn't exist");
             return View(category);
         }
 
-        // GET: Categories/Delete/5
         public async Task<IActionResult> Delete(long? id)
         {
-            if (id == null || _context.Category == null)
-            {
-                return NotFound();
-            }
-
-            var category = await _context.Category
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var category = await _categoryService.FIndByIdAsync(id ?? 0);
             if (category == null)
             {
                 return NotFound();
@@ -144,28 +110,12 @@ namespace ExpenseTracker.Controllers
             return View(category);
         }
 
-        // POST: Categories/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
-            if (_context.Category == null)
-            {
-                return Problem("Entity set 'MariaDbContext.Category'  is null.");
-            }
-            var category = await _context.Category.FindAsync(id);
-            if (category != null)
-            {
-                _context.Category.Remove(category);
-            }
-            
-            await _context.SaveChangesAsync();
+            await _categoryService.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
-        }
-
-        private bool CategoryExists(long id)
-        {
-          return (_context.Category?.Any(e => e.Id == id)).GetValueOrDefault();
         }
     }
 }

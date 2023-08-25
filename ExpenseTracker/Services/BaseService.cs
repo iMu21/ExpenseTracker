@@ -17,17 +17,20 @@ namespace ExpenseTracker.Services
 
         public async Task<List<TEntity>> GetAllAsync()
         {
+            List<TEntity> entities;
             if (typeof(TEntity) == typeof(Expense))
             {
-                return await _context.Set<TEntity>()
+                entities= await _context.Set<TEntity>()
                     .Include("Category")
                     .ToListAsync();
             }
             else
             {
-                return await _context.Set<TEntity>()
+                entities= await _context.Set<TEntity>()
                                 .ToListAsync();
             }
+
+            return entities == null ? new List<TEntity>() { } : entities;
         }
         public async Task<TEntity?> FIndByIdAsync(long id)
         {
@@ -65,8 +68,6 @@ namespace ExpenseTracker.Services
 
             entity.UpdatedBy = GetUserId();
             entity.UpdatedDateUtc = DateTime.UtcNow;
-
-            _context.Update(entity);
 
             await _context.SaveChangesAsync();
 
